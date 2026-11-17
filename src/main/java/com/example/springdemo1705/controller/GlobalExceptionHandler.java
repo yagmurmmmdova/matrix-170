@@ -2,6 +2,8 @@ package com.example.springdemo1705.controller;
 
 import com.example.springdemo1705.exception.AccountNotFoundException;
 import com.example.springdemo1705.exception.InsufficientBalanceException;
+import com.example.springdemo1705.exception.UserNotFoundException;
+import com.example.springdemo1705.exception.UsernameAlreadyExistsException;
 import com.example.springdemo1705.model.ExceptionResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -70,5 +72,19 @@ public class GlobalExceptionHandler {
     public ExceptionResponse handleException(RuntimeException e) {
         log.error("Unexpected runtime error occurred: {}", e.getMessage(), e);
         return buildError(HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage());
+    }
+
+    @ExceptionHandler(UserNotFoundException.class)
+    @ResponseStatus(HttpStatus.NOT_FOUND)
+    public ExceptionResponse handleException(UserNotFoundException e) {
+        log.error("User not found error: {}", e.getMessage());
+        return buildError(HttpStatus.NOT_FOUND, e.getMessage());
+    }
+
+    @ExceptionHandler(UsernameAlreadyExistsException.class)
+    @ResponseStatus(HttpStatus.CONFLICT) //409
+    public ExceptionResponse handleException(UsernameAlreadyExistsException e) {
+        log.warn("Username already exists error: {}", e.getMessage());
+        return buildError(HttpStatus.CONFLICT, e.getMessage());
     }
 }
