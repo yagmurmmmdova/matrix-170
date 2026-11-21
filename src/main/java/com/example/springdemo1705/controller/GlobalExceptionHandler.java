@@ -1,12 +1,11 @@
 package com.example.springdemo1705.controller;
 
-import com.example.springdemo1705.exception.AccountNotFoundException;
-import com.example.springdemo1705.exception.InsufficientBalanceException;
-import com.example.springdemo1705.exception.UserNotFoundException;
-import com.example.springdemo1705.exception.UsernameAlreadyExistsException;
+import com.example.springdemo1705.exception.*;
 import com.example.springdemo1705.model.ExceptionResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.transaction.IllegalTransactionStateException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -49,13 +48,6 @@ public class GlobalExceptionHandler {
         return buildError(HttpStatus.BAD_REQUEST, e.getMessage());
     }
 
-    @ExceptionHandler(IllegalTransactionStateException.class)
-    @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
-    public ExceptionResponse handleException(IllegalTransactionStateException e) {
-        log.error("Transaction propagation error (MANDATORY): {}", e.getMessage(), e);
-        return buildError(HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage());
-    }
-
     @ExceptionHandler(MethodArgumentNotValidException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public ExceptionResponse handleException(MethodArgumentNotValidException e) {
@@ -65,13 +57,6 @@ public class GlobalExceptionHandler {
                 .map(i -> i.getField() + ": " + i.getDefaultMessage())
                 .collect(Collectors.joining("; "));
         return buildError(HttpStatus.BAD_REQUEST, errors);
-    }
-
-    @ExceptionHandler(RuntimeException.class)
-    @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
-    public ExceptionResponse handleException(RuntimeException e) {
-        log.error("Unexpected runtime error occurred: {}", e.getMessage(), e);
-        return buildError(HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage());
     }
 
     @ExceptionHandler(UserNotFoundException.class)
@@ -84,7 +69,43 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(UsernameAlreadyExistsException.class)
     @ResponseStatus(HttpStatus.CONFLICT) //409
     public ExceptionResponse handleException(UsernameAlreadyExistsException e) {
-        log.warn("Username already exists error: {}", e.getMessage());
+        log.error("Username already exists error: {}", e.getMessage());
         return buildError(HttpStatus.CONFLICT, e.getMessage());
     }
+
+    @ExceptionHandler(BadCredentialsException.class)
+    @ResponseStatus(HttpStatus.UNAUTHORIZED) // 401
+    public ExceptionResponse handleException(BadCredentialsException e) {
+        log.error("Authentication failed: Invalid username or password");
+        return buildError(HttpStatus.UNAUTHORIZED, "Invalid username or password");
+    }
+
+    @ExceptionHandler(InvalidTokenException.class)
+    @ResponseStatus(HttpStatus.UNAUTHORIZED) //401
+    public ExceptionResponse handleException(InvalidTokenException e) {
+        log.warn("Token error: {}", e.getMessage());
+        return buildError(HttpStatus.UNAUTHORIZED, e.getMessage());
+    }
+
+    @ExceptionHandler(AccessDeniedException.class)
+    @ResponseStatus(HttpStatus.FORBIDDEN) // 403
+    public ExceptionResponse handleException(AccessDeniedException e) {
+        log.warn("Access denied: {}", e.getMessage());
+        return buildError(HttpStatus.FORBIDDEN, "You do not have permission to perform this action");
+    }
+
+    @ExceptionHandler(IllegalTransactionStateException.class)
+    @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
+    public ExceptionResponse handleException(IllegalTransactionStateException e) {
+        log.error("Transaction propagation error (MANDATORY): {}", e.getMessage(), e);
+        return buildError(HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage());
+    }
+
+    @ExceptionHandler(RuntimeException.class)
+    @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR) //500
+    public ExceptionResponse handleException(RuntimeException e) {
+        log.error("Unexpected runtime error occurred: {}", e.getMessage(), e);
+        return buildError(HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage());
+    }
+
 }
